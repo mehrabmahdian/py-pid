@@ -36,7 +36,7 @@ html_context = {
     "github_user": "mehrabmahdian",
     "github_repo": "py-pid",
     "github_version": "main",
-    "conf_py_path": "/docs/",
+    "conf_py_path": "/",
 }
 
 

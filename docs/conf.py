@@ -32,4 +32,4 @@ html_context = {
     "conf_py_path": "/",                  # Path in the repo to your docs root
 }
 
-html_static_path = ['_static']
+# html_static_path = ['_static']

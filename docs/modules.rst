@@ -1,7 +1,7 @@
 PID Module
 ==========
 
-.. automodule:: py_pid.controller
+.. automodule:: py_pidx.controller
    :members:
    :undoc-members:
    :show-inheritance:

@@ -436,8 +436,8 @@ class PID:
         float
             Updated controller output value.
         """
-        with self._lock:
-            return self._run(process_variable, delta_time, feedforward)
+        # with self._lock:
+        return self._run(process_variable, delta_time, feedforward)
 
     def __repr__(self):
         """

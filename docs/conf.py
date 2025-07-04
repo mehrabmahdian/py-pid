@@ -22,7 +22,7 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
-html_theme = "furo"
+html_theme = "alabaster"
 
 html_context = {
     "display_github": True,              # Show GitHub link in the docs

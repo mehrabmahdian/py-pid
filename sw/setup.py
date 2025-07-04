@@ -1,10 +1,8 @@
-# sw/setup.py
-
 import setuptools
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
-readme_path = root / "README.md"
+root = Path(__file__).resolve().parent  # sw/
+readme_path = root.parent / "README.md"
 
 with open(readme_path, "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -18,7 +16,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/mehrabmahdian/py-pid",
-    package_dir={"": "."},  # packages are inside `sw/py_pid`
+    package_dir={"": "."},
     packages=setuptools.find_packages(where="."),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath('../sw'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Project information -----------------------------------------------------
-project = 'py-pid'
+project = 'py_pidx'
 copyright = '2025, Mehrab Mahdian'
 author = 'Mehrab Mahdian'
 
@@ -27,7 +27,7 @@ html_theme = "furo"
 html_context = {
     "display_github": True,              # Show GitHub link in the docs
     "github_user": "mehrabmahdian",     # Your GitHub username
-    "github_repo": "py-pid",             # Your GitHub repo name
+    "github_repo": "py_pidx",             # Your GitHub repo name
     "github_version": "main",             # Branch name
     "conf_py_path": "/",                  # Path in the repo to your docs root
 }

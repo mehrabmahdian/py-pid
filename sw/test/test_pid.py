@@ -1,4 +1,4 @@
-from py_pid import PID
+from py_pidx import PID
 
 def test_initialization_defaults():
     pid = PID()

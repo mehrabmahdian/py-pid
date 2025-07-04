@@ -1,7 +1,7 @@
 import time
 import threading
 from typing import Optional, Tuple
-from py_pid.gain_scheduler import GainScheduler
+from py_pidx.gain_scheduler import GainScheduler
 
 
 class PID:

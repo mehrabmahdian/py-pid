@@ -5,6 +5,8 @@ Welcome to Py-PID's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   introduction
    development
    usage
-   modules
+   api
+   examples

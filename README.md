@@ -13,7 +13,6 @@
 - 🔁 **Slew rate limiting**
 - 🌀 **Derivative filtering**
 - 🧮 **Feedforward support**
-- 🔐 **Thread-safe implementation**
 - 🧪 **Precision control with dynamic time steps**
 
 ---
@@ -34,7 +33,6 @@ pip install py_pidx
 | Low-pass Filtering        | Smooths noisy derivative term using alpha filtering                |
 | Feedforward               | Optional term to improve open-loop response                        |
 | Slew Rate Limiting        | Prevents rapid output changes that may shock actuators             |
-| Thread-safe               | Internal lock for safe use in concurrent applications              |
 
 
 ## 🔧 Basic Usage

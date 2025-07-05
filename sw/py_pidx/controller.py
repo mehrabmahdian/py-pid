@@ -1,5 +1,4 @@
 import time
-import threading
 from typing import Optional, Tuple
 from py_pidx.gain_scheduler import GainScheduler
 
@@ -418,9 +417,10 @@ class PID:
 
         return output
 
+
     def run(self, process_variable: float, delta_time: Optional[float] = None, feedforward: Optional[float] = None) -> float:
         """
-        Thread-safe public method to compute the PID output for the given process variable.
+        Compute the PID output for the given process variable.
 
         Parameters
         ----------
@@ -436,7 +436,6 @@ class PID:
         float
             Updated controller output value.
         """
-        # with self._lock:
         return self._run(process_variable, delta_time, feedforward)
 
     def __repr__(self):

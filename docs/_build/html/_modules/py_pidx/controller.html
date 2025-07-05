@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>py_pidx.controller &#8212; py_pidx  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=f6a572b4" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">py_pidx</a></h1>
+
+
+
+<p class="blurb">Advanced PID controller library for Python</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=mehrabmahdian&repo=py_pidx&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../development.html">Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for py_pidx.controller</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">py_pidx.gain_scheduler</span> <span class="kn">import</span> <span class="n">GainScheduler</span>
+
+
+<div class="viewcode-block" id="PID">
+<a class="viewcode-back" href="../../api.html#py_pidx.controller.PID">[docs]</a>
+<span class="k">class</span> <span class="nc">PID</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    PID controller implementing proportional-integral-derivative control with</span>
+<span class="sd">    optional features including gain scheduling, deadbands, derivative filtering,</span>
+<span class="sd">    anti-windup, slew rate limiting, feedforward control, and thread safety.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Kp : float, default=1.0</span>
+<span class="sd">        Proportional gain coefficient.</span>
+<span class="sd">    Ki : float, default=0.0</span>
+<span class="sd">        Integral gain coefficient.</span>
+<span class="sd">    Kd : float, default=0.0</span>
+<span class="sd">        Derivative gain coefficient.</span>
+<span class="sd">    gain_scheduler : Optional[GainScheduler], default=None</span>
+<span class="sd">        Optional object to dynamically update PID gains based on process variable.</span>
+<span class="sd">    setpoint : float, default=0.0</span>
+<span class="sd">        Desired target value for the controlled variable.</span>
+<span class="sd">    sample_time : float, default=0.01</span>
+<span class="sd">        Minimum time interval (seconds) between PID calculations.</span>
+<span class="sd">    output_limits : Tuple[Optional[float], Optional[float]], default=(None, None)</span>
+<span class="sd">        Min and max allowable controller output.</span>
+<span class="sd">    output_deadband_limits : Tuple[Optional[float], Optional[float]], default=(None, None)</span>
+<span class="sd">        Range around zero output where output is forced to zero to reduce noise effects.</span>
+<span class="sd">    error_deadband_limits : Tuple[Optional[float], Optional[float]], default=(None, None)</span>
+<span class="sd">        Range around zero error where error is treated as zero to reduce sensitivity to noise.</span>
+<span class="sd">    feedforward : float, default=0.0</span>
+<span class="sd">        Constant feedforward term added to controller output.</span>
+<span class="sd">    derivative_filter : float, default=0.0</span>
+<span class="sd">        Low-pass smoothing factor (alpha) for derivative term (0.0–1.0).</span>
+<span class="sd">    auto_mode : bool, default=True</span>
+<span class="sd">        Enable or disable PID output calculation.</span>
+<span class="sd">    anti_windup : bool, default=True</span>
+<span class="sd">        Enable anti-windup to prevent integral runaway.</span>
+<span class="sd">    max_output_rate : Optional[float], default=None</span>
+<span class="sd">        Max allowed rate of output change per second (slew rate limiting).</span>
+<span class="sd">    derivative_on_measurement : bool, default=False</span>
+<span class="sd">        Compute derivative term from process variable instead of error.</span>
+<span class="sd">    integral_on_measurement : bool, default=False</span>
+<span class="sd">        Compute integral term based on measurement changes instead of error.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Gain scheduling allows dynamic tuning of PID gains based on operating conditions.</span>
+<span class="sd">    - Anti-windup helps prevent integral accumulation when actuators saturate.</span>
+<span class="sd">    - Derivative filtering reduces noise amplification in the derivative term.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">Kp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">Ki</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">Kd</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">gain_scheduler</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GainScheduler</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">setpoint</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">sample_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">output_limits</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">output_deadband_limits</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">error_deadband_limits</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">feedforward</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">derivative_filter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">auto_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">anti_windup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_output_rate</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">derivative_on_measurement</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">integral_on_measurement</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize PID controller with specified parameters.</span>
+
+<span class="sd">        Sets all gains, limits, modes, and initial internal states.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        (See class-level docstring for details)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">derivative_on_measurement</span> <span class="o">=</span> <span class="n">derivative_on_measurement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integral_on_measurement</span> <span class="o">=</span> <span class="n">integral_on_measurement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Kp</span> <span class="o">=</span> <span class="n">Kp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Ki</span> <span class="o">=</span> <span class="n">Ki</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Kd</span> <span class="o">=</span> <span class="n">Kd</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gain_scheduler</span> <span class="o">=</span> <span class="n">gain_scheduler</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setpoint</span> <span class="o">=</span> <span class="n">setpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_time</span> <span class="o">=</span> <span class="n">sample_time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_limits</span> <span class="o">=</span> <span class="n">output_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_deadband_limits</span> <span class="o">=</span> <span class="n">output_deadband_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_deadband_limits</span> <span class="o">=</span> <span class="n">error_deadband_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feedforward</span> <span class="o">=</span> <span class="n">feedforward</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">derivative_filter</span> <span class="o">=</span> <span class="n">derivative_filter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_mode</span> <span class="o">=</span> <span class="n">auto_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">anti_windup</span> <span class="o">=</span> <span class="n">anti_windup</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_error</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_derivative</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_output_rate</span> <span class="o">=</span> <span class="n">max_output_rate</span>
+
+<div class="viewcode-block" id="PID.reset">
+<a class="viewcode-back" href="../../api.html#py_pidx.controller.PID.reset">[docs]</a>
+    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset the internal PID controller state.</span>
+
+<span class="sd">        Clears integral accumulation, last error, last derivative,</span>
+<span class="sd">        last process variable, and output history to initial states.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_error</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_derivative</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="mf">0.0</span></div>
+
+
+<div class="viewcode-block" id="PID.set_auto_mode">
+<a class="viewcode-back" href="../../api.html#py_pidx.controller.PID.set_auto_mode">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_auto_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enable or disable automatic PID computation mode.</span>
+
+<span class="sd">        When disabled, the PID output remains constant at the last computed value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        enabled : bool</span>
+<span class="sd">            True to enable automatic PID computation, False to disable.</span>
+<span class="sd">        reset : bool, optional</span>
+<span class="sd">            If True, reset internal state when mode is changed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_mode</span> <span class="o">=</span> <span class="n">enabled</span>
+        <span class="k">if</span> <span class="n">reset</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="PID.set_output_limits">
+<a class="viewcode-back" href="../../api.html#py_pidx.controller.PID.set_output_limits">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_output_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">max_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Define the saturation limits for the controller output.</span>
+
+<span class="sd">        Controller output will be clamped within these bounds.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        min_output : float or None</span>
+<span class="sd">            Minimum output limit; None means no limit.</span>
+<span class="sd">        max_output : float or None</span>
+<span class="sd">            Maximum output limit; None means no limit.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_limits</span> <span class="o">=</span> <span class="p">(</span><span class="n">min_output</span><span class="p">,</span> <span class="n">max_output</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_compute_proportional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate proportional term contribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Current error between setpoint and process variable.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Proportional term output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Kp</span> <span class="o">*</span> <span class="n">error</span>
+
+    <span class="k">def</span> <span class="nf">_compute_integral</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate integral term contribution and update integral accumulator.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Current error between setpoint and process variable.</span>
+<span class="sd">        process_variable : float</span>
+<span class="sd">            Current measured process variable.</span>
+<span class="sd">        delta_time : float</span>
+<span class="sd">            Time elapsed since last update (seconds).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Integral term output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">integral_on_measurement</span><span class="p">:</span>
+            <span class="c1"># Integrate the negative of the measurement change (like derivative on measurement)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="n">process_variable</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="n">delta_pv</span> <span class="o">=</span> <span class="n">process_variable</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">-=</span> <span class="n">delta_pv</span> <span class="o">*</span> <span class="n">delta_time</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="n">process_variable</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">+=</span> <span class="n">error</span> <span class="o">*</span> <span class="n">delta_time</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ki</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span>
+
+    <span class="k">def</span> <span class="nf">_compute_derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate derivative term contribution, optionally filtering and</span>
+<span class="sd">        computing derivative on measurement or error.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Current error between setpoint and process variable.</span>
+<span class="sd">        process_variable : float</span>
+<span class="sd">            Current measured process variable.</span>
+<span class="sd">        delta_time : float</span>
+<span class="sd">            Time elapsed since last update (seconds).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Derivative term output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">delta_time</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">derivative_on_measurement</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="n">process_variable</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="n">derivative</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">process_variable</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta_time</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_pv</span> <span class="o">=</span> <span class="n">process_variable</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">derivative</span> <span class="o">=</span> <span class="p">(</span><span class="n">error</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_error</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta_time</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">derivative_filter</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">derivative_filter</span>
+            <span class="n">derivative</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">derivative</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_derivative</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_derivative</span> <span class="o">=</span> <span class="n">derivative</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Kd</span> <span class="o">*</span> <span class="n">derivative</span>
+
+    <span class="k">def</span> <span class="nf">_calculate_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate current control error.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process_variable : float</span>
+<span class="sd">            Current measured value of the process variable.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Error (setpoint - process_variable).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">setpoint</span> <span class="o">-</span> <span class="n">process_variable</span>
+
+    <span class="k">def</span> <span class="nf">_apply_output_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clamp the output to configured limits and apply anti-windup correction if enabled.</span>
+
+<span class="sd">        If output saturates, integral term is adjusted to prevent integral windup.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        output : float</span>
+<span class="sd">            Raw PID output before clamping.</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Current control error.</span>
+<span class="sd">        delta_time : float</span>
+<span class="sd">            Time elapsed since last update (seconds).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Clamped output value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">min_output</span><span class="p">,</span> <span class="n">max_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_limits</span>
+
+        <span class="k">if</span> <span class="n">max_output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">&gt;</span> <span class="n">max_output</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">max_output</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">anti_windup</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">-=</span> <span class="n">error</span> <span class="o">*</span> <span class="n">delta_time</span>
+
+        <span class="k">elif</span> <span class="n">min_output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">&lt;</span> <span class="n">min_output</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">min_output</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">anti_windup</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_integral</span> <span class="o">-=</span> <span class="n">error</span> <span class="o">*</span> <span class="n">delta_time</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">_apply_slew_rate_limiter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Limit the rate of change of output to max_output_rate to prevent abrupt changes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        output : float</span>
+<span class="sd">            Proposed controller output.</span>
+<span class="sd">        delta_time : float</span>
+<span class="sd">            Time elapsed since last update (seconds).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Output value adjusted by slew rate limiter if applicable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_output_rate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>
+
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">output</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span>
+        <span class="n">max_delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_output_rate</span> <span class="o">*</span> <span class="n">delta_time</span>
+
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_delta</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">+</span> <span class="n">max_delta</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">_apply_output_deadband</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply deadband to the output signal, zeroing it if within the deadband limits.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        output : float</span>
+<span class="sd">            Current controller output.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Zero if output within deadband range; otherwise unchanged output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">min_output_deadband</span><span class="p">,</span> <span class="n">max_output_deadband</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_deadband_limits</span>
+        <span class="k">if</span> <span class="n">min_output_deadband</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_output_deadband</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>
+
+        <span class="k">if</span> <span class="n">min_output_deadband</span> <span class="o">&lt;=</span> <span class="n">output</span> <span class="o">&lt;=</span> <span class="n">max_output_deadband</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">_apply_error_deadband</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply deadband to the error signal, zeroing it if within the deadband limits.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Current control error.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Zero if error within deadband range; otherwise unchanged error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">min_error_deadband</span><span class="p">,</span> <span class="n">max_error_deadband</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_deadband_limits</span>
+        <span class="k">if</span> <span class="n">min_error_deadband</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_error_deadband</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">error</span>
+
+        <span class="k">if</span> <span class="n">min_error_deadband</span> <span class="o">&lt;=</span> <span class="n">error</span> <span class="o">&lt;=</span> <span class="n">max_error_deadband</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="k">return</span> <span class="n">error</span>
+
+    <span class="k">def</span> <span class="nf">_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">feedforward</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform a PID calculation cycle, computing the control output based on current process variable.</span>
+
+<span class="sd">        Applies gain scheduling, deadbands, integral anti-windup, derivative filtering,</span>
+<span class="sd">        output limits, slew rate limiting, and feedforward.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process_variable : float</span>
+<span class="sd">            Current measured process variable.</span>
+<span class="sd">        delta_time : float or None</span>
+<span class="sd">            Time elapsed since last PID calculation. If None, it will be computed internally.</span>
+<span class="sd">        feedforward : float or None</span>
+<span class="sd">            Optional feedforward term to override the stored feedforward value.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Updated controller output value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gain_scheduler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Kp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ki</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Kd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gain_scheduler</span><span class="o">.</span><span class="n">get_gains</span><span class="p">(</span><span class="n">process_variable</span><span class="p">)</span>
+
+        <span class="n">ff</span> <span class="o">=</span> <span class="n">feedforward</span> <span class="k">if</span> <span class="n">feedforward</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">feedforward</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_mode</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span>
+
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_error</span><span class="p">(</span><span class="n">process_variable</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_deadband_limits</span> <span class="o">!=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_error_deadband</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">delta_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span> <span class="o">=</span> <span class="n">now</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span>
+            <span class="n">delta_time</span> <span class="o">=</span> <span class="n">now</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span>
+
+        <span class="k">if</span> <span class="n">delta_time</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_time</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_time</span> <span class="o">=</span> <span class="n">now</span>
+
+        <span class="c1"># Proportional term</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_proportional</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+
+        <span class="c1"># Integral term with anti-windup</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_integral</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">)</span>
+
+        <span class="c1"># Derivative term with optional filtering</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_derivative</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">P</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">P</span> <span class="o">+</span> <span class="n">I</span> <span class="o">+</span> <span class="n">D</span> <span class="o">+</span> <span class="n">ff</span>
+
+        <span class="c1"># Clamp output and apply anti-windup</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_output_limits</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">)</span>
+
+        <span class="c1"># Apply output deadband if configured</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_deadband_limits</span> <span class="o">!=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_output_deadband</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+        <span class="c1"># Limit output slew rate</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_slew_rate_limiter</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_error</span> <span class="o">=</span> <span class="n">error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="n">output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="n">output</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+
+<div class="viewcode-block" id="PID.run">
+<a class="viewcode-back" href="../../api.html#py_pidx.controller.PID.run">[docs]</a>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_variable</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">feedforward</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the PID output for the given process variable.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        process_variable : float</span>
+<span class="sd">            Current measured value of the process variable.</span>
+<span class="sd">        delta_time : float or None, optional</span>
+<span class="sd">            Time elapsed since last update; if None, it will be internally computed.</span>
+<span class="sd">        feedforward : float or None, optional</span>
+<span class="sd">            Optional feedforward term to override the internal feedforward value.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Updated controller output value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="n">process_variable</span><span class="p">,</span> <span class="n">delta_time</span><span class="p">,</span> <span class="n">feedforward</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a string representation showing current gains, setpoint, and last output.</span>
+
+<span class="sd">        Useful for debugging and logging the PID state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;PID(Kp=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">Kp</span><span class="si">}</span><span class="s2">, Ki=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">Ki</span><span class="si">}</span><span class="s2">, Kd=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">Kd</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Setpoint=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">setpoint</span><span class="si">}</span><span class="s2">, Output=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_output</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2025, Mehrab Mahdian.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

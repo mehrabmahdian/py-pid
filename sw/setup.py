@@ -10,7 +10,7 @@ with open(readme_path, "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="py_pidx",
-    version="0.0.2",
+    version="1.0.0",
     author="Mehrab Mahdian",
     author_email="memahdian@outlook.com",
     description="py_pidx: A Python package for PID control.",

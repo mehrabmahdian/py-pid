@@ -11,36 +11,44 @@ class PID:
 
     Parameters
     ----------
-    Kp : float
+    Kp : float, default=1.0
         Proportional gain coefficient.
-    Ki : float
+    Ki : float, default=0.0
         Integral gain coefficient.
-    Kd : float
+    Kd : float, default=0.0
         Derivative gain coefficient.
-    gain_scheduler : Optional[GainScheduler]
+    gain_scheduler : Optional[GainScheduler], default=None
         Optional object to dynamically update PID gains based on process variable.
-    setpoint : float
+    setpoint : float, default=0.0
         Desired target value for the controlled variable.
-    sample_time : float
-        Minimum interval (in seconds) between PID calculations.
-    output_limits : Tuple[Optional[float], Optional[float]]
-        Tuple specifying min and max allowable controller output values.
-    output_deadband_limits : Tuple[Optional[float], Optional[float]]
+    sample_time : float, default=0.01
+        Minimum time interval (seconds) between PID calculations.
+    output_limits : Tuple[Optional[float], Optional[float]], default=(None, None)
+        Min and max allowable controller output.
+    output_deadband_limits : Tuple[Optional[float], Optional[float]], default=(None, None)
         Range around zero output where output is forced to zero to reduce noise effects.
-    error_deadband_limits : Tuple[Optional[float], Optional[float]]
+    error_deadband_limits : Tuple[Optional[float], Optional[float]], default=(None, None)
         Range around zero error where error is treated as zero to reduce sensitivity to noise.
-    feedforward : float
+    feedforward : float, default=0.0
         Constant feedforward term added to controller output.
-    derivative_filter : float
-        Smoothing factor (alpha) for low-pass filtering the derivative term, between 0 and 1.
-    auto_mode : bool
-        Flag enabling or disabling the PID controller output calculation.
-    anti_windup : bool
-        Enables anti-windup correction to prevent integral term runaway.
-    max_output_rate : Optional[float]
-        Maximum allowed rate of change of the output per second (slew rate limiter).
-    derivative_on_measurement : bool
-        If True, derivative is calculated on process variable; otherwise on error.
+    derivative_filter : float, default=0.0
+        Low-pass smoothing factor (alpha) for derivative term (0.0–1.0).
+    auto_mode : bool, default=True
+        Enable or disable PID output calculation.
+    anti_windup : bool, default=True
+        Enable anti-windup to prevent integral runaway.
+    max_output_rate : Optional[float], default=None
+        Max allowed rate of output change per second (slew rate limiting).
+    derivative_on_measurement : bool, default=False
+        Compute derivative term from process variable instead of error.
+    integral_on_measurement : bool, default=False
+        Compute integral term based on measurement changes instead of error.
+
+    Notes
+    -----
+    - Gain scheduling allows dynamic tuning of PID gains based on operating conditions.
+    - Anti-windup helps prevent integral accumulation when actuators saturate.
+    - Derivative filtering reduces noise amplification in the derivative term.
     """
 
     def __init__(

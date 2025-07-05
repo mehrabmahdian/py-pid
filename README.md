@@ -14,6 +14,8 @@
 - 🌀 **Derivative filtering**
 - 🧮 **Feedforward support**
 - 🧪 **Precision control with dynamic time steps**
+- 🔄 **Integral and derivative-on-measurement option**
+
 
 ---
 
@@ -24,12 +26,13 @@ pip install py_pidx
 ```
 
 | Feature                   | Description                                                        |
-| ------------------------- | ------------------------------------------------------------------ |
+|---------------------------|--------------------------------------------------------------------|
 | `Kp`, `Ki`, `Kd`          | Tunable proportional, integral, and derivative gains               |
 | `GainScheduler`           | Dynamically adjust PID gains at runtime                            |
 | Deadbands                 | Zero out small control efforts or errors to reduce actuator jitter |
 | Anti-windup               | Prevents runaway integral values during saturation                 |
 | Derivative on Measurement | Optionally compute D-term from PV instead of error                 |
+| Integral on Measurement   | Optionally compute I-term on process variable instead of error     |
 | Low-pass Filtering        | Smooths noisy derivative term using alpha filtering                |
 | Feedforward               | Optional term to improve open-loop response                        |
 | Slew Rate Limiting        | Prevents rapid output changes that may shock actuators             |

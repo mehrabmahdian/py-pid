@@ -60,6 +60,7 @@ class PID:
         anti_windup: bool = True,
         max_output_rate: Optional[float] = None,
         derivative_on_measurement: bool = False,
+        integral_on_measurement: bool = False,
     ):
         """
         Initialize PID controller with specified parameters.
@@ -71,6 +72,7 @@ class PID:
         (See class-level docstring for details)
         """
         self.derivative_on_measurement = derivative_on_measurement
+        self.integral_on_measurement = integral_on_measurement
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -94,7 +96,6 @@ class PID:
         self._output = 0.0
         self._last_output = 0.0
         self.max_output_rate = max_output_rate
-        self._lock = threading.Lock()
 
     def reset(self):
         """
@@ -103,16 +104,14 @@ class PID:
         Clears integral accumulation, last error, last derivative,
         last process variable, and output history to initial states.
 
-        Thread-safe operation ensured by internal lock.
         """
-        with self._lock:
-            self._last_time = None
-            self._last_error = 0.0
-            self._integral = 0.0
-            self._last_derivative = 0.0
-            self._last_pv = None
-            self._output = 0.0
-            self._last_output = 0.0
+        self._last_time = None
+        self._last_error = 0.0
+        self._integral = 0.0
+        self._last_derivative = 0.0
+        self._last_pv = None
+        self._output = 0.0
+        self._last_output = 0.0
 
     def set_auto_mode(self, enabled: bool, reset: bool = True):
         """
@@ -162,7 +161,7 @@ class PID:
         """
         return self.Kp * error
 
-    def _compute_integral(self, error: float, delta_time: float) -> float:
+    def _compute_integral(self, error: float, process_variable: float, delta_time: float) -> float:
         """
         Calculate integral term contribution and update integral accumulator.
 
@@ -170,6 +169,8 @@ class PID:
         ----------
         error : float
             Current error between setpoint and process variable.
+        process_variable : float
+            Current measured process variable.
         delta_time : float
             Time elapsed since last update (seconds).
 
@@ -178,7 +179,17 @@ class PID:
         float
             Integral term output.
         """
-        self._integral += error * delta_time
+        if self.integral_on_measurement:
+            # Integrate the negative of the measurement change (like derivative on measurement)
+            if self._last_pv is None:
+                self._last_pv = process_variable
+                return 0.0
+            delta_pv = process_variable - self._last_pv
+            self._integral -= delta_pv * delta_time
+            self._last_pv = process_variable
+        else:
+            self._integral += error * delta_time
+
         return self.Ki * self._integral
 
     def _compute_derivative(self, error: float, process_variable: float, delta_time: float) -> float:
@@ -393,7 +404,7 @@ class PID:
         P = self._compute_proportional(error)
 
         # Integral term with anti-windup
-        I = self._compute_integral(error, delta_time)
+        I = self._compute_integral(error, process_variable, delta_time)
 
         # Derivative term with optional filtering
         D = self._compute_derivative(error, process_variable, delta_time)

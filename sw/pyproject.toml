@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "py_pidx"
 version = "0.0.2"
-description = "py_pidx: A simple Python package for PID control."
+description = "py_pidx: A Python package for PID control."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }

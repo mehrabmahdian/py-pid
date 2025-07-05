@@ -1,7 +1,7 @@
 import setuptools
 from pathlib import Path
 
-root = Path(__file__).resolve().parent  # sw/
+root = Path(__file__).resolve().parent
 readme_path = root.parent / "README.md"
 
 with open(readme_path, "r", encoding="utf-8") as fh:
@@ -13,7 +13,7 @@ setuptools.setup(
     version="0.0.2",
     author="Mehrab Mahdian",
     author_email="memahdian@outlook.com",
-    description="py_pidx: A simple Python package for PID control.",
+    description="py_pidx: A Python package for PID control.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/mehrabmahdian/py_pidx",

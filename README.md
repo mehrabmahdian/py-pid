@@ -141,7 +141,7 @@ If you find this library useful, consider starring the repo or sharing it with o
 
 This is the primary development repository for `py_pidx`.
 
-A read-only mirror is maintained at the official [TalTech Locomotion Group](https://github.com/taltechloc/py_pidx) for internal usage and research integration.  
+A read-only mirror is maintained at the official [TalTech Lab-on-a-Chip Group](https://github.com/taltechloc/py_pidx) for internal usage and research integration.  
 
 All development and releases occur here.
 
